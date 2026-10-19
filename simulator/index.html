@@ -400,11 +400,11 @@
       gap: 8px;
     }
 
-    /* 繼電器矩陣 (Relay Matrix K1~K8) */
+    /* 繼電器矩陣 (Relay Matrix K1~K9 + Brake Delay) */
     .relays-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
       background: #09090b;
       padding: 10px;
       border-radius: 10px;
@@ -427,6 +427,28 @@
       border-color: #22c55e;
       background: #14532d;
       box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+    }
+
+    .relay-card.active.speed2 {
+      border-color: #38bdf8;
+      background: #0369a1;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    }
+
+    .relay-card.active.speed2 .relay-led {
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+
+    .relay-card.active.brake {
+      border-color: #f59e0b;
+      background: #78350f;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+    }
+
+    .relay-card.active.brake .relay-led {
+      background: #f59e0b;
+      box-shadow: 0 0 8px #f59e0b;
     }
 
     .relay-card.active.estop-main {
@@ -616,6 +638,14 @@
         </div>
       </div>
 
+      <!-- 二速檔位切換按鍵 (2-Speed Detent Selector) -->
+      <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:0 4px;">
+        <span style="font-size:11px; font-weight:800; color:#18181b;">按鍵行程 (Detent):</span>
+        <button id="btnSpeedToggle" style="background:#18181b; color:#4ade80; border:1px solid #3f3f46; border-radius:12px; padding:3px 10px; font-size:11px; font-weight:bold; cursor:pointer;" title="點擊切換一速/二速，或按住 Shift 鍵切換二速">
+          一段速 (SLOW)
+        </button>
+      </div>
+
       <!-- 8大按鈕操作區 (6 動作 + 2 輔助) -->
       <div class="button-grid">
         <button class="ind-btn btn-start" id="btnStart" title="Enter 鍵">🟢 START (Enter)</button>
@@ -632,7 +662,7 @@
       </div>
 
       <div class="keyboard-hint">
-        ⌨️ 支援鍵盤熱鍵操作 (WASD / Enter / Esc)
+        ⌨️ 熱鍵：WASD 移動、按住 Shift 切換【二段全速】、Enter 開機、Esc 急停
       </div>
     </div>
 
@@ -661,7 +691,7 @@
       <div class="factory-stats-bar">
         <div class="stat-item">小車 (X): <span class="stat-val" id="statTrolleyX">300.0 mm</span></div>
         <div class="stat-item">吊鉤 (Y): <span class="stat-val" id="statHookY">320.0 mm</span></div>
-        <div class="stat-item">大車深度 (Z): <span class="stat-val" id="statBridgeZ">0.0 mm</span></div>
+        <div class="stat-item">檔位: <span class="stat-val" id="statSpeedMode" style="color:#4ade80;">1速 (慢速)</span></div>
         <div class="stat-item">極限開關: <span class="stat-val" id="statLimitSwitch" style="color:#22c55e;">NORMAL</span></div>
       </div>
     </div>
@@ -679,9 +709,9 @@
         </span>
       </div>
 
-      <!-- 8組工業繼電器狀態 (Relay Outputs) -->
+      <!-- 繼電器狀態 (Relay Outputs) -->
       <div style="font-size:12px; font-weight:bold; color:#cbd5e1; display:flex; justify-content:space-between;">
-        <span>繼電器接點輸出 (K1 ~ K8 Contacts)</span>
+        <span>繼電器接點輸出 (K1 ~ K9 + 煞車延遲保護)</span>
         <span style="font-size:11px; color:#94a3b8;">雙重互鎖防呆</span>
       </div>
 
@@ -725,6 +755,16 @@
           <span class="relay-id">K8</span>
           <div class="relay-led"></div>
           <span class="relay-name">MAIN (主開關)</span>
+        </div>
+        <div class="relay-card speed2" id="relay-K9">
+          <span class="relay-id">K9</span>
+          <div class="relay-led"></div>
+          <span class="relay-name">SPEED 2 (二速)</span>
+        </div>
+        <div class="relay-card brake" id="relay-BK">
+          <span class="relay-id">BK</span>
+          <div class="relay-led"></div>
+          <span class="relay-name">BRAKE (煞車)</span>
         </div>
       </div>
 
@@ -793,6 +833,13 @@
     const BTN_START = 1 << 6;
     const BTN_HORN  = 1 << 7;
     const BTN_ESTOP = 1 << 8;
+    const BTN_UP_2    = 1 << 9;
+    const BTN_DOWN_2  = 1 << 10;
+    const BTN_EAST_2  = 1 << 11;
+    const BTN_WEST_2  = 1 << 12;
+    const BTN_SOUTH_2 = 1 << 13;
+    const BTN_NORTH_2 = 1 << 14;
+    const BTN_SPEED2  = 1 << 15;
 
     const RELAY_UP    = 1 << 0;
     const RELAY_DOWN  = 1 << 1;
@@ -802,6 +849,8 @@
     const RELAY_SOUTH = 1 << 5;
     const RELAY_HORN  = 1 << 6;
     const RELAY_MAIN  = 1 << 7;
+    const RELAY_SPEED_2     = 1 << 8;
+    const RELAY_BRAKE_DELAY = 1 << 9;
 
     const RX_DISENGAGED = 0;
     const RX_ENGAGED    = 1;
@@ -896,11 +945,14 @@
     let txPacketSeq = 0;
     let txDropUntilMs = 0;
     let injectCrcUntilMs = 0;
+    let isSpeed2Locked = false;
+    let isShiftPressed = false;
 
     // DOM 元素快取
     const ledTx = document.getElementById('ledTx');
     const ledFault = document.getElementById('ledFault');
     const btnEstop = document.getElementById('btnEstop');
+    const btnSpeedToggle = document.getElementById('btnSpeedToggle');
     const oledTitle = document.getElementById('oledTitle');
     const oledDetail = document.getElementById('oledDetail');
     const oledState = document.getElementById('oledState');
@@ -918,7 +970,7 @@
     // 工廠動態 DOM
     const statTrolleyX = document.getElementById('statTrolleyX');
     const statHookY = document.getElementById('statHookY');
-    const statBridgeZ = document.getElementById('statBridgeZ');
+    const statSpeedMode = document.getElementById('statSpeedMode');
     const statLimitSwitch = document.getElementById('statLimitSwitch');
 
     const relayCards = {
@@ -930,7 +982,31 @@
       K6: document.getElementById('relay-K6'),
       K7: document.getElementById('relay-K7'),
       K8: document.getElementById('relay-K8'),
+      K9: document.getElementById('relay-K9'),
+      BK: document.getElementById('relay-BK'),
     };
+
+    function updateSpeedToggleUI() {
+      const isSpeed2 = isSpeed2Locked || isShiftPressed;
+      if (isSpeed2) {
+        btnSpeedToggle.textContent = "二段速 (FAST)";
+        btnSpeedToggle.style.color = "#38bdf8";
+        btnSpeedToggle.style.borderColor = "#38bdf8";
+        btnSpeedToggle.style.boxShadow = "0 0 8px rgba(56, 189, 248, 0.4)";
+      } else {
+        btnSpeedToggle.textContent = "一段速 (SLOW)";
+        btnSpeedToggle.style.color = "#4ade80";
+        btnSpeedToggle.style.borderColor = "#3f3f46";
+        btnSpeedToggle.style.boxShadow = "none";
+      }
+    }
+
+    btnSpeedToggle.addEventListener('click', () => {
+      isSpeed2Locked = !isSpeed2Locked;
+      updateSpeedToggleUI();
+      sound.playClick();
+      evaluateTxState();
+    });
 
     // 按鍵映射綁定
     const buttons = [
@@ -968,6 +1044,12 @@
 
     // 鍵盤操作支援
     window.addEventListener('keydown', (e) => {
+      if (e.key === 'Shift') {
+        isShiftPressed = true;
+        updateSpeedToggleUI();
+        evaluateTxState();
+        return;
+      }
       if (e.repeat) return;
       const key = e.key.toLowerCase();
       let handled = true;
@@ -998,6 +1080,12 @@
     });
 
     window.addEventListener('keyup', (e) => {
+      if (e.key === 'Shift') {
+        isShiftPressed = false;
+        updateSpeedToggleUI();
+        evaluateTxState();
+        return;
+      }
       const key = e.key.toLowerCase();
       if (key === 'enter') {
         releaseVirtualBtn('btnStart', BTN_START);
@@ -1105,17 +1193,19 @@
         oledTitle.textContent = "[ ARMED / READY ]";
         oledTitle.style.color = "#22c55e";
 
+        const isSpeed2 = isSpeed2Locked || isShiftPressed;
+        const speedTag = isSpeed2 ? " [2速]" : " [1速]";
         const moves = [];
-        if (rawMask & BTN_UP) moves.push("UP (升)");
-        if (rawMask & BTN_DOWN) moves.push("DOWN (降)");
-        if (rawMask & BTN_EAST) moves.push("EAST (東)");
-        if (rawMask & BTN_WEST) moves.push("WEST (西)");
-        if (rawMask & BTN_NORTH) moves.push("NORTH (北)");
-        if (rawMask & BTN_SOUTH) moves.push("SOUTH (南)");
+        if (rawMask & BTN_UP) moves.push("UP (升)" + speedTag);
+        if (rawMask & BTN_DOWN) moves.push("DOWN (降)" + speedTag);
+        if (rawMask & BTN_EAST) moves.push("EAST (東)" + speedTag);
+        if (rawMask & BTN_WEST) moves.push("WEST (西)" + speedTag);
+        if (rawMask & BTN_NORTH) moves.push("NORTH (北)" + speedTag);
+        if (rawMask & BTN_SOUTH) moves.push("SOUTH (南)" + speedTag);
         if (rawMask & BTN_HORN) moves.push("HORN (鳴笛)");
 
-        oledDetail.innerHTML = moves.length > 0 ? "CMD: " + moves.join(" + ") : "AWAITING MOTION KEY...";
-        oledState.textContent = moves.length > 0 ? "STATE: OPERATING" : "STATE: ARMED";
+        oledDetail.innerHTML = moves.length > 0 ? "CMD: " + moves.join(" + ") : (isSpeed2 ? "READY // [2-SPEED FAST]" : "AWAITING MOTION KEY...");
+        oledState.textContent = moves.length > 0 ? (isSpeed2 ? "STATE: OPERATING (2速)" : "STATE: OPERATING (1速)") : "STATE: ARMED";
       }
     }
 
@@ -1133,6 +1223,8 @@
         this.packetsReceived = 0;
         this.crcErrors = 0;
         this.watchdogTrips = 0;
+        this.wasSpeed2Active = false;
+        this.brakeDelayUntilMs = 0;
       }
 
       processPacket(pkt, nowMs, upperLimitSensor = false) {
@@ -1157,6 +1249,8 @@
         if (pkt.packetType === PKT_ESTOP || (pkt.buttonState & BTN_ESTOP)) {
           this.state = RX_ESTOP;
           this.relays = 0;
+          this.wasSpeed2Active = false;
+          this.brakeDelayUntilMs = 0;
           return true;
         }
 
@@ -1191,17 +1285,48 @@
           const northActive = (pkt.buttonState & BTN_NORTH) && !(pkt.buttonState & BTN_SOUTH);
           const southActive = (pkt.buttonState & BTN_SOUTH) && !(pkt.buttonState & BTN_NORTH);
 
-          // 衝頂極限開關保護：阻擋上升，但允許下降脫困
-          if (upActive && !upperLimitSensor) {
-            out |= RELAY_UP;
+          const anyMotionActive = upActive || downActive || eastActive || westActive || northActive || southActive;
+
+          // 二速訊號判定 (手冊規範：支援單向二速位元或通用二速旗標)
+          const isSpeed2Req = anyMotionActive && (
+            (pkt.buttonState & (BTN_UP_2 | BTN_DOWN_2 | BTN_EAST_2 | BTN_WEST_2 |
+                                BTN_NORTH_2 | BTN_SOUTH_2 | BTN_SPEED2)) !== 0
+          );
+
+          // 煞車延遲保護 (Brake Delay) 判定：
+          // 手冊規範：當按鍵從二速回到一速時，一速跟二速的輸出點會跳掉，一秒鐘後一速的輸出點會自動再吸住
+          if (this.wasSpeed2Active && anyMotionActive && !isSpeed2Req) {
+            this.brakeDelayUntilMs = nowMs + 1000;
+            appendLog(`[BRAKE DELAY] ⚡ 降速衝擊防護啟動！斷開動作接點 1000ms 緩衝釋放動能 (BK 閉合)`, 'trip');
           }
-          if (downActive) {
-            out |= RELAY_DOWN;
+          this.wasSpeed2Active = isSpeed2Req;
+
+          const inBrakeDelay = anyMotionActive && !isSpeed2Req && (nowMs < this.brakeDelayUntilMs);
+
+          if (inBrakeDelay) {
+            // 處於 1 秒煞車延遲保護過渡期，斷開動作接點，點亮延遲指示
+            out |= RELAY_BRAKE_DELAY;
+          } else {
+            // 衝頂極限開關保護：阻擋上升，但允許下降脫困
+            if (upActive && !upperLimitSensor) {
+              out |= RELAY_UP;
+            }
+            if (downActive) {
+              out |= RELAY_DOWN;
+            }
+            if (eastActive)  out |= RELAY_EAST;
+            if (westActive)  out |= RELAY_WEST;
+            if (northActive) out |= RELAY_NORTH;
+            if (southActive) out |= RELAY_SOUTH;
+
+            // 若為二速，同時閉合二速加速繼電器 (吸/吸接點模式)
+            if (isSpeed2Req) {
+              if (!(upActive && upperLimitSensor)) {
+                out |= RELAY_SPEED_2;
+              }
+            }
           }
-          if (eastActive)  out |= RELAY_EAST;
-          if (westActive)  out |= RELAY_WEST;
-          if (northActive) out |= RELAY_NORTH;
-          if (southActive) out |= RELAY_SOUTH;
+
           if (pkt.buttonState & BTN_HORN) out |= RELAY_HORN;
 
           this.relays = out;
@@ -1215,6 +1340,8 @@
           if (nowMs - this.lastPacketTimeMs > this.watchdogTimeoutMs) {
             this.state = RX_LOST_LINK;
             this.relays = 0; // 強制切斷主接觸器與所有繼電器
+            this.wasSpeed2Active = false;
+            this.brakeDelayUntilMs = 0;
             this.watchdogTrips++;
             appendLog(`[FAIL-SAFE] 500ms 看門狗超時！RF 訊號遺失，強制切斷主接觸器 (KM1 釋放)`, 'trip');
           }
@@ -1303,8 +1430,10 @@
       lastAnimTime = now;
 
       // 1. 物理動作更新 (根據接收機繼電器輸出)
-      const moveSpeed = 90 * dt; // 橫行速度
-      const hoistSpeed = 70 * dt; // 升降速度
+      const isSpeed2 = (receiver.relays & RELAY_SPEED_2) !== 0;
+      const moveSpeed = (isSpeed2 ? 110 : 45) * dt; // 橫行速度 (二速 110 mm/s, 一速 45 mm/s)
+      const hoistSpeed = (isSpeed2 ? 90 : 35) * dt; // 升降速度 (二速 90 mm/s, 一速 35 mm/s)
+      const bridgeSpeed = (isSpeed2 ? 40 : 18) * dt; // 大車速度
 
       // 衝頂極限開關判定
       const upperLimitSensor = (factory.hookY <= factory.minHookY);
@@ -1324,10 +1453,10 @@
         factory.hookY = Math.min(factory.maxHookY, factory.hookY + hoistSpeed);
       }
       if (receiver.relays & RELAY_NORTH) {
-        factory.bridgeZ = Math.max(-40, factory.bridgeZ - 20 * dt);
+        factory.bridgeZ = Math.max(-40, factory.bridgeZ - bridgeSpeed);
       }
       if (receiver.relays & RELAY_SOUTH) {
-        factory.bridgeZ = Math.min(40, factory.bridgeZ + 20 * dt);
+        factory.bridgeZ = Math.min(40, factory.bridgeZ + bridgeSpeed);
       }
 
       // 貨物吸附/掛載邏輯
@@ -1383,7 +1512,19 @@
       // 狀態更新
       statTrolleyX.textContent = factory.trolleyX.toFixed(1) + " mm";
       statHookY.textContent = factory.hookY.toFixed(1) + " mm";
-      statBridgeZ.textContent = factory.bridgeZ.toFixed(1) + " mm";
+
+      const inBrakeDelay = (receiver.relays & RELAY_BRAKE_DELAY) !== 0;
+      if (inBrakeDelay) {
+        const remain = Math.max(0, ((receiver.brakeDelayUntilMs - now) / 1000)).toFixed(1);
+        statSpeedMode.textContent = `煞車緩衝 (${remain}s)`;
+        statSpeedMode.style.color = "#f59e0b";
+      } else if (isSpeed2) {
+        statSpeedMode.textContent = "2速 (全速 90mm/s)";
+        statSpeedMode.style.color = "#38bdf8";
+      } else {
+        statSpeedMode.textContent = "1速 (慢速 35mm/s)";
+        statSpeedMode.style.color = "#4ade80";
+      }
 
       requestAnimationFrame(renderFactory);
     }
@@ -1621,6 +1762,17 @@
       const pktType = isEstopLocked ? PKT_ESTOP : (txState === STATE_OPERATING ? PKT_COMMAND : PKT_HEARTBEAT);
       let btnState = isEstopLocked ? BTN_ESTOP : rawMask;
 
+      // 若處於二速模式，且有方向按鍵被按下，注入二速按鍵位元與通用二速旗標 (吸/吸接點)
+      const isSpeed2Active = isSpeed2Locked || isShiftPressed;
+      if (!isEstopLocked && isSpeed2Active) {
+        if (rawMask & BTN_UP)    btnState |= (BTN_UP_2 | BTN_SPEED2);
+        if (rawMask & BTN_DOWN)  btnState |= (BTN_DOWN_2 | BTN_SPEED2);
+        if (rawMask & BTN_EAST)  btnState |= (BTN_EAST_2 | BTN_SPEED2);
+        if (rawMask & BTN_WEST)  btnState |= (BTN_WEST_2 | BTN_SPEED2);
+        if (rawMask & BTN_NORTH) btnState |= (BTN_NORTH_2 | BTN_SPEED2);
+        if (rawMask & BTN_SOUTH) btnState |= (BTN_SOUTH_2 | BTN_SPEED2);
+      }
+
       // 封包位元組 (用於計算真實 CRC16)
       const packetBytes = new Uint8Array([
         PROTOCOL_SYNC1,
@@ -1720,7 +1872,7 @@
         rxStatusBadge.style.color = "#d4d4d8";
       }
 
-      // 更新繼電器指示矩陣 (K1~K8)
+      // 更新繼電器指示矩陣 (K1~K9 + BK)
       updateRelayUI(relayCards.K1, receiver.relays & RELAY_UP);
       updateRelayUI(relayCards.K2, receiver.relays & RELAY_DOWN);
       updateRelayUI(relayCards.K3, receiver.relays & RELAY_EAST);
@@ -1729,6 +1881,8 @@
       updateRelayUI(relayCards.K6, receiver.relays & RELAY_SOUTH);
       updateRelayUI(relayCards.K7, receiver.relays & RELAY_HORN);
       updateRelayUI(relayCards.K8, receiver.relays & RELAY_MAIN);
+      updateRelayUI(relayCards.K9, receiver.relays & RELAY_SPEED_2);
+      updateRelayUI(relayCards.BK, receiver.relays & RELAY_BRAKE_DELAY);
 
     }, 30);
 

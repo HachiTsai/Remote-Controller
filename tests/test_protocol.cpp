@@ -131,21 +131,52 @@ int main() {
     assert((rx.getRelays() & RELAY_MAIN) != 0);
     std::cout << "PASSED\n";
 
+    // 4.4.2 二段速 (2-Speed) 與 1000ms 煞車保護延遲測試 (手冊 P.16~P.18 規範)
+    std::cout << "  - Checking 2-Speed engagement (UP-1 & SPEED_2)... ";
+    RemotePacket speed2Pkt = createValidPacket(0x53595331, 6, PKT_COMMAND, STATE_OPERATING, BTN_MASK_UP | BTN_MASK_UP_2);
+    rx.processPacket(speed2Pkt, 330);
+    assert((rx.getRelays() & RELAY_UP) != 0);
+    assert((rx.getRelays() & RELAY_SPEED_2) != 0); // 吸/吸接點模式
+    assert(rx.isSpeed2Active() == true);
+    std::cout << "PASSED\n";
+
+    std::cout << "  - Checking 1000ms Brake Delay Protection on downshift to Speed 1... ";
+    // 由二速降回一速 (在 340ms 時降速)
+    rx.processPacket(upPkt, 340);
+    // 在 340ms ~ 1340ms 期間，必須處於煞車延遲保護中：一速與二速皆跳開！
+    assert(rx.isBrakeDelayActive(340) == true);
+    assert((rx.getRelays() & RELAY_BRAKE_DELAY) != 0);
+    assert((rx.getRelays() & RELAY_UP) == 0);
+    assert((rx.getRelays() & RELAY_SPEED_2) == 0);
+
+    // 時間推進至 800ms (仍在延遲期內)
+    rx.processPacket(upPkt, 800);
+    assert((rx.getRelays() & RELAY_BRAKE_DELAY) != 0);
+    assert((rx.getRelays() & RELAY_UP) == 0);
+
+    // 時間推進至 1350ms (> 1000ms 煞車延遲結束)，一速接點自動平穩再吸住！
+    rx.processPacket(upPkt, 1350);
+    assert(rx.isBrakeDelayActive(1350) == false);
+    assert((rx.getRelays() & RELAY_BRAKE_DELAY) == 0);
+    assert((rx.getRelays() & RELAY_UP) != 0);
+    assert((rx.getRelays() & RELAY_SPEED_2) == 0);
+    std::cout << "PASSED\n";
+
     // 4.5 衝頂極限開關 (Upper Limit Switch) 防撞保護
     std::cout << "  - Checking Upper Limit Switch protection... ";
     // 極限開關觸發時，禁止上升
-    rx.processPacket(upPkt, 350, /* upperLimitSensor= */ true);
+    rx.processPacket(upPkt, 1400, /* upperLimitSensor= */ true);
     assert((rx.getRelays() & RELAY_UP) == 0);
     // 但允許下降脫困
-    RemotePacket downPkt = createValidPacket(0x53595331, 5, PKT_COMMAND, STATE_OPERATING, BTN_MASK_DOWN);
-    rx.processPacket(downPkt, 400, /* upperLimitSensor= */ true);
+    RemotePacket downPkt = createValidPacket(0x53595331, 7, PKT_COMMAND, STATE_OPERATING, BTN_MASK_DOWN);
+    rx.processPacket(downPkt, 1450, /* upperLimitSensor= */ true);
     assert((rx.getRelays() & RELAY_DOWN) != 0);
     std::cout << "PASSED\n";
 
     // 4.6 看門狗超時斷訊安全跳脫 (Watchdog Timeout Fail-safe)
     std::cout << "  - Checking 500ms Watchdog Timeout Fail-Safe... ";
-    // 在 400ms 時有封包，現在時間推進到 950ms (> 500ms 未收封包)
-    rx.tick(950);
+    // 在 1450ms 時有封包，現在時間推進到 2000ms (> 500ms 未收封包)
+    rx.tick(2000);
     assert(rx.getState() == RX_STATE_LOST_LINK);
     assert(rx.getRelays() == RELAY_NONE); // 主接觸器與所有繼電器強制釋放
     assert(rx.getWatchdogTrips() == 1);
@@ -154,11 +185,11 @@ int main() {
     // 4.7 緊急停止 (E-STOP) 測試
     std::cout << "  - Checking E-STOP tripping... ";
     // 先重新啟動
-    rx.processPacket(startPkt, 1000);
+    rx.processPacket(startPkt, 2100);
     assert(rx.getState() == RX_STATE_ENGAGED);
     // 送出急停封包
-    RemotePacket estopPkt = createValidPacket(0x53595331, 6, PKT_ESTOP, STATE_ESTOP, BTN_MASK_ESTOP);
-    rx.processPacket(estopPkt, 1050);
+    RemotePacket estopPkt = createValidPacket(0x53595331, 8, PKT_ESTOP, STATE_ESTOP, BTN_MASK_ESTOP);
+    rx.processPacket(estopPkt, 2150);
     assert(rx.getState() == RX_STATE_ESTOP);
     assert(rx.getRelays() == RELAY_NONE);
     std::cout << "PASSED\n";
