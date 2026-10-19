@@ -294,9 +294,16 @@ def handle_pr_and_merge(branch: str, full_message: str, auto_merge: bool = True)
     # 4. 若倉庫未開放 Auto-Merge，則主動等待 CI 檢查全綠後執行 Merge Commit
     print(f"[info] 等待 GitHub Actions 工作流啟動中 (5 秒)...")
     time.sleep(5)
-    print(f"[info] 正在即時監聽 GitHub Actions CI 檢查狀態 (gh pr checks {branch} --watch)...")
-    watch_res = subprocess.run(["gh", "pr", "checks", branch, "--watch"])
-    if watch_res.returncode == 0:
+    watch_ok = False
+    for attempt in range(1, 4):
+        watch_res = subprocess.run(["gh", "pr", "checks", branch, "--watch"])
+        if watch_res.returncode == 0:
+            watch_ok = True
+            break
+        print(f"[warn] 監聽中發生網路中斷或暫時逾時（第 {attempt} 次），3 秒後重試...")
+        time.sleep(3)
+
+    if watch_ok:
         merge_res = subprocess.run(
             ["gh", "pr", "merge", branch, "--merge", "--delete-branch"],
             capture_output=True, text=True
