@@ -136,7 +136,14 @@ class LocalStorageBackend(StorageBackend):
         repo_dir = self.root_dir / sanitize_filename(repo)
         repo_dir.mkdir(parents=True, exist_ok=True)
 
-        filename = f"{sanitize_filename(category)}_{sanitize_filename(title)}.md"
+        clean_cat = sanitize_filename(category)
+        clean_raw_title = sanitize_filename(title)
+        if clean_raw_title.startswith(f"{clean_cat}_"):
+            clean_title = clean_raw_title
+        else:
+            clean_title = f"{clean_cat}_{clean_raw_title}"
+
+        filename = f"{clean_title}.md"
         target_path = repo_dir / filename
         formatted_content = self._format_content(
             repo, category, title, content, tags
@@ -272,7 +279,13 @@ class GDriveCliStorageBackend(StorageBackend):
         doc_format: str = "doc",
     ) -> Tuple[str, str]:
         repo_folder_id = self._get_or_create_repo_folder(repo)
-        clean_title = f"{sanitize_filename(category)}_{sanitize_filename(title)}"
+        clean_cat = sanitize_filename(category)
+        clean_raw_title = sanitize_filename(title)
+        if clean_raw_title.startswith(f"{clean_cat}_"):
+            clean_title = clean_raw_title
+        else:
+            clean_title = f"{clean_cat}_{clean_raw_title}"
+
         clean_ext = ".csv" if doc_format == "sheet" else ".md"
         temp_name = f"{clean_title}{clean_ext}"
 
@@ -332,12 +345,15 @@ class GDriveCliStorageBackend(StorageBackend):
             url_res = self._run_gdrive(["readonly", "url", file_id])
             doc_url = url_res.stdout.strip()
 
-        # 同步儲存一份本機快照（若本機 Google Drive 同步資料夾存在）
-        local_repo_dir = DEFAULT_LOCAL_PATH / sanitize_filename(repo)
-        if local_repo_dir.exists():
-            local_backup = local_repo_dir / f"{clean_title}.md"
-            with open(local_backup, "w", encoding="utf-8") as f:
+        # 本機快照一律存放於系統快取目錄 (~/.cache/agent_study_notes)，絕不寫入 Google Drive 本機同步目錄以防自動上傳 .md
+        cache_dir = Path.home() / ".cache" / "agent_study_notes" / sanitize_filename(repo)
+        try:
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            local_cache = cache_dir / f"{clean_title}.md"
+            with open(local_cache, "w", encoding="utf-8") as f:
                 f.write(formatted)
+        except Exception:
+            pass
 
         type_label = WORKSPACE_TYPE_NAMES.get(target_mime, "Google 文件")
         link_str = doc_url or (f"https://docs.google.com/document/d/{file_id}/edit" if file_id else "")
