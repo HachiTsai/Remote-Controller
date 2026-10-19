@@ -40,6 +40,19 @@ enum ButtonMask : uint16_t {
     BTN_MASK_ESTOP  = (1 << 8),  // 0x0100 (1 = 急停觸發)
 };
 
+// 接收端繼電器輸出遮罩 (Relay Outputs)
+enum RelayMask : uint16_t {
+    RELAY_NONE      = 0x0000,
+    RELAY_UP        = (1 << 0),  // K1: 主鉤上升
+    RELAY_DOWN      = (1 << 1),  // K2: 主鉤下降
+    RELAY_EAST      = (1 << 2),  // K3: 小車東向 (右)
+    RELAY_WEST      = (1 << 3),  // K4: 小車西向 (左)
+    RELAY_NORTH     = (1 << 4),  // K5: 大車北向 (前)
+    RELAY_SOUTH     = (1 << 5),  // K6: 大車南向 (後)
+    RELAY_HORN      = (1 << 6),  // K7: 警報蜂鳴器/電笛
+    RELAY_MAIN      = (1 << 7),  // K8: 主接觸器 (Main Contactor)
+};
+
 // 嚴格位元組對齊的工業遙控封包結構
 #pragma pack(push, 1)
 struct RemotePacket {
