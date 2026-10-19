@@ -1,10 +1,10 @@
 ---
 name: commit-workflow
-description: 結構化 Git 提交流程：分析 staged diff，依統一模板草擬 Commit Message，用 git commit -F 提交並推送。
+description: 結構化 Git 提交流程：分析 staged diff，依統一模板草擬 Commit Message，用 git commit -F 提交、推送、自動發起 PR 並於 CI 通過後自動合併至 main。
 whenToUse: 當用戶說「開始提交流程」、「幫我 commit」，或需要產出結構化 Commit Message 時
 disableModelInvocation: false
 metadata:
-  version: "2026.10.19.1"
+  version: "2026.10.19.2"
 ---
 
 # Commit Workflow Skill
@@ -14,16 +14,18 @@ metadata:
 - `開始提交流程`
 - `幫我 commit`
 - `python3 .claude/skills/commit-workflow/scripts/committer.py`（暫存並印出 diff 與模板，供 Agent 草擬）
-- `python3 .claude/skills/commit-workflow/scripts/committer.py --message-file .git/COMMIT_MSG_TEMP --no-stage`（提交已草擬的訊息並推送）
-- `python3 .claude/skills/commit-workflow/scripts/committer.py --auto-quick`（自動產生精簡訊息並提交，限小型變更）
+- `python3 .claude/skills/commit-workflow/scripts/committer.py --message-file .git/COMMIT_MSG_TEMP --no-stage`（提交、推送、自動發起 PR 並於 CI 通過後自動合併）
+- `python3 .claude/skills/commit-workflow/scripts/committer.py --auto-quick`（自動產生精簡訊息並全自動提交、推送、發 PR 與合併）
 
 ### 參數
 
 | 參數 | 用途 |
 | :--- | :--- |
-| `--message-file PATH` | 讀取訊息檔，驗證標題後 `git commit -F`，並補上 Co-Authored-By |
-| `--auto-quick` | 依 staged 檔案自動產生標題與 bullet；與 `--message-file` 互斥；超過 10 檔會警告 |
-| `--no-push` | 提交後不推送 |
+| `--message-file PATH` | 讀取訊息檔，驗證標題後 `git commit -F`，補上 Co-Authored-By，並自動發起 PR 與合併 |
+| `--auto-quick` | 依 staged 檔案自動產生標題與 bullet，並全自動建立 PR 與合併 |
+| `--no-pr` | 只提交與推送，不自動建立 PR |
+| `--no-merge` | 自動建立 PR，但不自動等待合併 |
+| `--no-push` | 提交後不推送、不建 PR |
 | `--dry-run` | 只預覽訊息，不提交 |
 | `--no-stage` | 不執行 `git add`，使用既有暫存區 |
 | `--stage-list PATH...` | 清空暫存區後只暫存指定路徑 |
@@ -34,7 +36,7 @@ metadata:
 ## 核心原則
 
 讓每一次提交都成為日後可考古的紀錄：標題說明改了什麼，內文說明為什麼改、怎麼驗證。
-遵循 Conventional Commits，並以統一模板取代分層判斷。
+遵循 Conventional Commits，並全面自動化「分支 ➔ 推送 ➔ 發 PR ➔ 等待 CI 驗證 ➔ Merge Commit 合併至 main ➔ 刪除分支」的完整閉環。
 
 ## 流程
 
@@ -44,8 +46,8 @@ metadata:
    - staged 內若含 `.env`、金鑰、憑證等敏感內容，停止並告知使用者，不提交。
    - 檢查 `.claude/rules/*.md` 是否 100% 索引於 `CLAUDE.md` 與 `.agent/rules/AGENT.md` 中。
 4. **草擬**：依模板寫出最終版本。
-5. **提交**：寫入 `.git/COMMIT_MSG_TEMP`，執行 `python3 .claude/skills/commit-workflow/scripts/committer.py --message-file .git/COMMIT_MSG_TEMP --no-stage`。
-6. **推送**：推送到當前分支。
+5. **提交與推送**：寫入 `.git/COMMIT_MSG_TEMP`，執行 `python3 .claude/skills/commit-workflow/scripts/committer.py --message-file .git/COMMIT_MSG_TEMP --no-stage`。
+6. **自動 PR 與 CI 合併**：腳本透過 `gh` CLI 自動向 `main` 發起 PR，並自動等待 GitHub Actions CI 通過後，以 Merge Commit 合併至 `main`，最後自動清理分支並切回最新 `main`。
 
 ## Commit Message 格式
 
