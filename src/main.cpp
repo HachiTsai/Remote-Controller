@@ -52,7 +52,7 @@ void setupDisplay() {
         display.setTextColor(SSD1306_WHITE);
         display.setTextSize(1);
         display.setCursor(10, 15);
-        display.println(F("EXLHOIST / ARC"));
+        display.println(F("IND CRANE V8"));
         display.setCursor(10, 30);
         display.println(F("REMOTE CONTROLLER"));
         display.setCursor(10, 45);
@@ -73,7 +73,7 @@ void updateDisplay(uint16_t rawMask, bool interlockError, bool estopActive) {
     // 頂部狀態列
     display.setTextSize(1);
     display.setCursor(0, 0);
-    display.print(F("ID:ARC1  BAT:"));
+    display.print(F("ID:SYS1  BAT:"));
     display.print(simulatedBattery);
     display.print(F("%"));
 

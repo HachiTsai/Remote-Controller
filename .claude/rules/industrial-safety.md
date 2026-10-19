@@ -1,6 +1,6 @@
 # 工業安全與互鎖規範 (Industrial Safety & Interlock Rules)
 
-本專案參考 Schneider Electric Harmony eXLhoist (ZART8LS) 與 Advanced Radiotech (ARC FLEX 系列) 工業標準，定義以下安全鐵律：
+本專案遵從國際起重機安全標準規範（EN ISO 13849-1 PLd / IEC 61508 SIL2），定義以下安全鐵律：
 
 ## 1. 緊急停止（E-Stop / Emergency Stop）最高優先權
 
