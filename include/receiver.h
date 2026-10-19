@@ -44,6 +44,10 @@ public:
         uint16_t expectedCrc = calculateCRC16((const uint8_t*)&pkt, sizeof(RemotePacket) - sizeof(uint16_t));
         if (pkt.checksum != expectedCrc) {
             m_crcErrors++;
+            // 工業安全防暴衝：收到損壞/竄改封包時命令不可信，立即阻斷所有動作繼電器 (UP/DOWN/EAST/WEST/NORTH/SOUTH)
+            if (m_state == RX_STATE_ENGAGED) {
+                m_relays = RELAY_MAIN; // 僅維持主接觸器供電，切斷運動動能
+            }
             return false;
         }
 

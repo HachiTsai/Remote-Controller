@@ -750,7 +750,7 @@
           📡 模擬斷訊 1 秒 (驗證跳脫)
         </button>
         <button class="sim-btn" id="btnCorruptCrc">
-          💥 注入 CRC 校驗錯誤
+          💥 注入 CRC 干擾 1 秒 (驗證停機)
         </button>
       </div>
 
@@ -895,7 +895,7 @@
     let isEstopLocked = false;
     let txPacketSeq = 0;
     let txDropUntilMs = 0;
-    let injectCrcErrorOnce = false;
+    let injectCrcUntilMs = 0;
 
     // DOM 元素快取
     const ledTx = document.getElementById('ledTx');
@@ -1143,6 +1143,10 @@
         // 3. CRC16 校驗
         if (pkt.calculatedCrc !== pkt.checksum) {
           this.crcErrors++;
+          // 工業安全防暴衝：收到錯誤校驗碼，命令不可信，立即阻斷動作繼電器
+          if (this.state === RX_ENGAGED) {
+            this.relays = RELAY_MAIN; // 僅維持主接觸器，切斷所有運動 (UP/DOWN/EAST/WEST/NORTH/SOUTH)
+          }
           return false;
         }
 
@@ -1283,10 +1287,10 @@
       appendLog(`[TEST INJECT] 注入 1000ms 斷訊/干擾測試... 觀察看門狗跳脫！`, 'trip');
     });
 
-    // 模擬 CRC 錯誤
+    // 模擬 CRC 錯誤 (連續 1 秒注入)
     document.getElementById('btnCorruptCrc').addEventListener('click', () => {
-      injectCrcErrorOnce = true;
-      appendLog(`[TEST INJECT] 下一筆封包將故意損壞 CRC 校驗碼！`, 'trip');
+      injectCrcUntilMs = performance.now() + 1000;
+      appendLog(`[TEST INJECT] 注入 1000ms 連續 CRC 損壞干擾... 驗證動作立即阻斷與安全跳脫！`, 'trip');
     });
 
     // ==========================================
@@ -1635,10 +1639,9 @@
       ]);
 
       let crc = calculateCRC16(packetBytes);
-      if (injectCrcErrorOnce) {
+      const isCrcCorrupted = (now < injectCrcUntilMs);
+      if (isCrcCorrupted) {
         crc ^= 0xBEEF; // 人為破壞 CRC
-        injectCrcErrorOnce = false;
-        appendLog(`[TEST INJECT] 注入損壞 CRC: 0x${crc.toString(16).toUpperCase()}`);
       }
 
       const pkt = {
@@ -1668,7 +1671,12 @@
       const typeStr = isEstopLocked ? "ESTOP" : (txState === STATE_OPERATING ? "CMD" : "HB");
       const maskHex = "0x" + btnState.toString(16).padStart(4, '0').toUpperCase();
       const crcHex = "0x" + crc.toString(16).padStart(4, '0').toUpperCase();
-      appendLog(`[#${txPacketSeq.toString().padStart(4, '0')}] TYPE:${typeStr} STATE:${txState} MASK:${maskHex} CRC:${crcHex}`, isEstopLocked ? 'estop' : '');
+
+      if (isCrcCorrupted) {
+        appendLog(`[#${txPacketSeq.toString().padStart(4, '0')}] 💥 [CRC CORRUPTED] CRC:${crcHex} (接收端拒收並切斷動作!)`, 'trip');
+      } else {
+        appendLog(`[#${txPacketSeq.toString().padStart(4, '0')}] TYPE:${typeStr} STATE:${txState} MASK:${maskHex} CRC:${crcHex}`, isEstopLocked ? 'estop' : '');
+      }
 
     }, 100);
 
