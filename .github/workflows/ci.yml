@@ -27,6 +27,9 @@ jobs:
       - name: 執行 Agent 提交流程與規範同步測試
         run: pytest -v tests/test_committer.py
 
+      - name: 執行 Study Notes 筆記技能單元測試
+        run: python -m unittest discover -s .claude/skills/study-notes/scripts/tests -v
+
       - name: 編譯並執行 C++ 協定與安全互鎖單元測試
         run: |
           g++ -std=c++17 -Wall -Wextra tests/test_protocol.cpp -o test_protocol

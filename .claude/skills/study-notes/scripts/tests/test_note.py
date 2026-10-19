@@ -91,6 +91,18 @@ class TestStudyNotes(unittest.TestCase):
         self.assertIn("title: \"Git_Branching\"", content)
         self.assertIn("始終使用 Feature Branch 與 PR。", content)
 
+    def test_add_doc_format(self):
+        msg, path = self.backend.add(
+            repo="RepoD",
+            category="Metrics",
+            title="Benchmark",
+            content="time,val\n1,10",
+            tags=["perf"],
+            doc_format="sheet",
+        )
+        self.assertTrue(Path(path).exists())
+        self.assertIn("Metrics_Benchmark.md", path)
+
 
 if __name__ == "__main__":
     unittest.main()
