@@ -1,0 +1,71 @@
+name: Industrial Remote Controller CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # -------------------------------------------------------------
+  # Job 1: 協定單元測試、安全互鎖邏輯驗證與 Agent 規範檢查
+  # -------------------------------------------------------------
+  protocol-and-agent-tests:
+    name: Protocol, Safety & Agent Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 程式碼
+        uses: actions/checkout@v4
+
+      - name: 設定 Python 環境
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安裝 Python 測試工具
+        run: python -m pip install --upgrade pip pytest ruff
+
+      - name: 執行 Agent 提交流程與規範同步測試
+        run: pytest -v tests/test_committer.py
+
+      - name: 編譯並執行 C++ 協定與安全互鎖單元測試
+        run: |
+          g++ -std=c++17 -Wall -Wextra tests/test_protocol.cpp -o test_protocol
+          ./test_protocol
+
+  # -------------------------------------------------------------
+  # Job 2: PlatformIO ESP32 韌體編譯與建構驗證
+  # -------------------------------------------------------------
+  firmware-build:
+    name: PlatformIO Firmware Build (ESP32)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 程式碼
+        uses: actions/checkout@v4
+
+      - name: 設定 Python 環境
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 快取 PlatformIO 核心套件與平台依賴
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: 安裝 PlatformIO
+        run: python -m pip install --upgrade platformio
+
+      - name: 編譯 ESP32 韌體 (pio run)
+        run: pio run
+
+      - name: 上傳編譯產物 (Firmware Binary Artifact)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-remote-firmware
+          path: .pio/build/esp32dev/firmware.bin
