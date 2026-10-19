@@ -103,6 +103,40 @@ class TestStudyNotes(unittest.TestCase):
         self.assertTrue(Path(path).exists())
         self.assertIn("Metrics_Benchmark.md", path)
 
+    def test_gdrive_read_by_filename_lookup(self):
+        from unittest.mock import MagicMock
+        from note import GDriveCliStorageBackend
+        import subprocess
+
+        gdrive = GDriveCliStorageBackend("gdrive", "dummy_folder_id")
+        # Mock list_notes
+        gdrive.list_notes = MagicMock(return_value=[
+            {
+                "repo": "AI_IT_Go",
+                "filename": "GCP_Billing_Threshold_Optimization_Guide",
+                "type": "Google Doc 📄",
+                "id": "1xKaHde6soD1GhMg5HJ6C8QQmFe6VhWp8PKURbl-Axqc",
+                "modified": "2026-10-19T03:18:00Z"
+            }
+        ])
+
+        def mock_run(args):
+            if args[1] == "export":
+                out_path = Path(args[3])
+                out_path.write_text("# Mock Export Content", encoding="utf-8")
+                return subprocess.CompletedProcess(args, 0, stdout="Exported", stderr="")
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="Error")
+
+        gdrive._run_gdrive = MagicMock(side_effect=mock_run)
+
+        # 測試使用長檔名讀取
+        content = gdrive.read("GCP_Billing_Threshold_Optimization_Guide")
+        self.assertEqual(content, "# Mock Export Content")
+        # 驗證傳遞給 export 的是解析出來的 File ID 而非檔名
+        called_args = gdrive._run_gdrive.call_args[0][0]
+        self.assertEqual(called_args[2], "1xKaHde6soD1GhMg5HJ6C8QQmFe6VhWp8PKURbl-Axqc")
+
 
 if __name__ == "__main__":
     unittest.main()
+

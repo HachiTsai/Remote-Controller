@@ -347,31 +347,44 @@ class GDriveCliStorageBackend(StorageBackend):
         )
 
     def list_notes(self, repo: Optional[str] = None) -> List[Dict]:
-        target_id = self.folder_id
-        if repo:
-            target_id = self._get_or_create_repo_folder(repo)
-
-        res = self._run_gdrive(["readonly", "ls", target_id, "--json"])
         notes = []
-        if res.returncode == 0:
-            try:
-                items = json.loads(res.stdout.strip() or "[]")
-                for item in items:
-                    mime = item.get("mimeType", "")
-                    # 包含 Google Docs/Sheets/Slides 或 Markdown 檔案
-                    if mime in WORKSPACE_TYPE_NAMES or item.get("name", "").endswith(".md"):
-                        type_name = WORKSPACE_TYPE_NAMES.get(mime, "Markdown 📝")
-                        notes.append(
-                            {
-                                "repo": repo or "Remote",
-                                "filename": item.get("name"),
-                                "type": type_name,
-                                "id": item.get("id"),
-                                "modified": item.get("modifiedTime", ""),
-                            }
-                        )
-            except Exception:
-                pass
+        if repo:
+            target_folders = [(repo, self._get_or_create_repo_folder(repo))]
+        else:
+            # 遍歷所有 repo 資料夾以列出真正的筆記文件
+            target_folders = []
+            res_root = self._run_gdrive(["readonly", "ls", self.folder_id, "--json"])
+            if res_root.returncode == 0:
+                try:
+                    for item in json.loads(res_root.stdout.strip() or "[]"):
+                        if item.get("mimeType") == "application/vnd.google-apps.folder":
+                            target_folders.append((item.get("name"), item.get("id")))
+                except Exception:
+                    pass
+
+        for r_name, f_id in target_folders:
+            res = self._run_gdrive(["readonly", "ls", f_id, "--json"])
+            if res.returncode == 0:
+                try:
+                    items = json.loads(res.stdout.strip() or "[]")
+                    for item in items:
+                        mime = item.get("mimeType", "")
+                        if mime == "application/vnd.google-apps.folder":
+                            continue
+                        if mime in WORKSPACE_TYPE_NAMES or item.get("name", "").endswith(".md"):
+                            type_name = WORKSPACE_TYPE_NAMES.get(mime, "Markdown 📝")
+                            notes.append(
+                                {
+                                    "repo": r_name,
+                                    "filename": item.get("name"),
+                                    "type": type_name,
+                                    "id": item.get("id"),
+                                    "modified": item.get("modifiedTime", ""),
+                                }
+                            )
+                except Exception:
+                    pass
+        notes.sort(key=lambda x: (x["repo"], x["filename"]))
         return notes
 
     def search(self, query: str, repo: Optional[str] = None) -> List[Dict]:
@@ -401,19 +414,34 @@ class GDriveCliStorageBackend(StorageBackend):
         temp_dir.mkdir(parents=True, exist_ok=True)
         out_file = temp_dir / "read_note.md"
 
-        # 若給定的是 File ID，嘗試 export
         file_id = identifier
-        if not re.match(r"^[A-Za-z0-9_-]{20,}$", identifier):
-            # 若傳入的是檔名，在 Drive 清單中匹配
-            all_notes = self.list_notes(repo)
+
+        # 優先從清單中依檔名或 ID 比對
+        matched_id = None
+        all_notes = self.list_notes(repo)
+
+        # 1. 精確比對檔名或 ID
+        for n in all_notes:
+            if n["filename"] == identifier or n.get("id") == identifier:
+                matched_id = n.get("id")
+                break
+
+        # 2. 忽略大小寫比對檔名
+        if not matched_id:
             for n in all_notes:
-                if (
-                    n["filename"] == identifier
-                    or n["filename"].lower() == identifier.lower()
-                    or identifier.lower() in n["filename"].lower()
-                ):
-                    file_id = n["id"]
+                if n["filename"].lower() == identifier.lower():
+                    matched_id = n.get("id")
                     break
+
+        # 3. 部分比對檔名
+        if not matched_id:
+            for n in all_notes:
+                if identifier.lower() in n["filename"].lower():
+                    matched_id = n.get("id")
+                    break
+
+        if matched_id:
+            file_id = matched_id
 
         # 優先嘗試以 export --format md 讀取 Google Doc
         res = self._run_gdrive(["readonly", "export", file_id, str(out_file), "--format", "md"])
