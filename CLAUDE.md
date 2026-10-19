@@ -5,6 +5,7 @@
 - **Git 結構化提交流程規範**：@[.claude/rules/git-commit-workflow.md](.claude/rules/git-commit-workflow.md)
 - **韌體分層架構規範**：@[.claude/rules/firmware-architecture.md](.claude/rules/firmware-architecture.md)
 - **工業安全與互鎖規範**：@[.claude/rules/industrial-safety.md](.claude/rules/industrial-safety.md)
+- **跨專案通用學習筆記技能**：@[.claude/skills/study-notes/SKILL.md](.claude/skills/study-notes/SKILL.md)
 
 ## 開發、擴充與提交鐵律
 

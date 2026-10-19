@@ -24,3 +24,4 @@
 - **韌體分層架構規範**：@[.claude/rules/firmware-architecture.md](../../.claude/rules/firmware-architecture.md)
 - **工業安全與互鎖規範**：@[.claude/rules/industrial-safety.md](../../.claude/rules/industrial-safety.md)
 - **Git 提交流程 Skill**：@[.claude/skills/commit-workflow/SKILL.md](../../.claude/skills/commit-workflow/SKILL.md)
+- **跨專案通用學習筆記 Skill**：@[.claude/skills/study-notes/SKILL.md](../../.claude/skills/study-notes/SKILL.md)
