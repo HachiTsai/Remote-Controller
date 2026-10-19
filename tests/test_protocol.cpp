@@ -118,6 +118,17 @@ int main() {
     rx.processPacket(conflictPkt, 300);
     assert((rx.getRelays() & RELAY_UP) == 0);
     assert((rx.getRelays() & RELAY_DOWN) == 0);
+
+    // 4.4.1 動作中遇 CRC 損壞封包，必須立即阻斷動作繼電器 (防止失控暴衝)
+    std::cout << "  - Checking Motion cutoff on CRC error during active drive... ";
+    rx.processPacket(upPkt, 310);
+    assert((rx.getRelays() & RELAY_UP) != 0); // 動作中
+    RemotePacket corruptDrivePkt = createValidPacket(0x41524331, 5, PKT_COMMAND, STATE_OPERATING, BTN_MASK_UP);
+    corruptDrivePkt.checksum ^= 0xABCD;
+    assert(rx.processPacket(corruptDrivePkt, 320) == false);
+    // 動作繼電器必須立即切斷 (不可維持舊的 UP 命令)，但主接觸器保持吸合待命
+    assert((rx.getRelays() & RELAY_UP) == 0);
+    assert((rx.getRelays() & RELAY_MAIN) != 0);
     std::cout << "PASSED\n";
 
     // 4.5 衝頂極限開關 (Upper Limit Switch) 防撞保護
