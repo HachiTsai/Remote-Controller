@@ -29,28 +29,38 @@ enum SystemState : uint8_t {
 // 按鈕狀態遮罩位元 (Bitmask)
 enum ButtonMask : uint16_t {
     BTN_MASK_NONE   = 0x0000,
-    BTN_MASK_UP     = (1 << 0),  // 0x0001
-    BTN_MASK_DOWN   = (1 << 1),  // 0x0002
-    BTN_MASK_EAST   = (1 << 2),  // 0x0004
-    BTN_MASK_WEST   = (1 << 3),  // 0x0008
-    BTN_MASK_SOUTH  = (1 << 4),  // 0x0010
-    BTN_MASK_NORTH  = (1 << 5),  // 0x0020
-    BTN_MASK_START  = (1 << 6),  // 0x0040
-    BTN_MASK_HORN   = (1 << 7),  // 0x0080
-    BTN_MASK_ESTOP  = (1 << 8),  // 0x0100 (1 = 急停觸發)
+    BTN_MASK_UP     = (1 << 0),  // 0x0001 (一段速)
+    BTN_MASK_DOWN   = (1 << 1),  // 0x0002 (一段速)
+    BTN_MASK_EAST   = (1 << 2),  // 0x0004 (一段速)
+    BTN_MASK_WEST   = (1 << 3),  // 0x0008 (一段速)
+    BTN_MASK_SOUTH  = (1 << 4),  // 0x0010 (一段速)
+    BTN_MASK_NORTH  = (1 << 5),  // 0x0020 (一段速)
+    BTN_MASK_START  = (1 << 6),  // 0x0040 (啟動)
+    BTN_MASK_HORN   = (1 << 7),  // 0x0080 (電笛)
+    BTN_MASK_ESTOP  = (1 << 8),  // 0x0100 (急停觸發)
+    // 二段速擴充位元 (2nd Speed Detent Masks)
+    BTN_MASK_UP_2   = (1 << 9),  // 0x0200 (UP 二速重按)
+    BTN_MASK_DOWN_2 = (1 << 10), // 0x0400 (DOWN 二速重按)
+    BTN_MASK_EAST_2 = (1 << 11), // 0x0800 (EAST 二速重按)
+    BTN_MASK_WEST_2 = (1 << 12), // 0x1000 (WEST 二速重按)
+    BTN_MASK_SOUTH_2= (1 << 13), // 0x2000 (SOUTH 二速重按)
+    BTN_MASK_NORTH_2= (1 << 14), // 0x4000 (NORTH 二速重按)
+    BTN_MASK_SPEED2 = (1 << 15), // 0x8000 (通用二速旗標)
 };
 
 // 接收端繼電器輸出遮罩 (Relay Outputs)
 enum RelayMask : uint16_t {
-    RELAY_NONE      = 0x0000,
-    RELAY_UP        = (1 << 0),  // K1: 主鉤上升
-    RELAY_DOWN      = (1 << 1),  // K2: 主鉤下降
-    RELAY_EAST      = (1 << 2),  // K3: 小車東向 (右)
-    RELAY_WEST      = (1 << 3),  // K4: 小車西向 (左)
-    RELAY_NORTH     = (1 << 4),  // K5: 大車北向 (前)
-    RELAY_SOUTH     = (1 << 5),  // K6: 大車南向 (後)
-    RELAY_HORN      = (1 << 6),  // K7: 警報蜂鳴器/電笛
-    RELAY_MAIN      = (1 << 7),  // K8: 主接觸器 (Main Contactor)
+    RELAY_NONE        = 0x0000,
+    RELAY_UP          = (1 << 0),  // K1: 主鉤上升 (一速)
+    RELAY_DOWN        = (1 << 1),  // K2: 主鉤下降 (一速)
+    RELAY_EAST        = (1 << 2),  // K3: 小車東向 (一速)
+    RELAY_WEST        = (1 << 3),  // K4: 小車西向 (一速)
+    RELAY_NORTH       = (1 << 4),  // K5: 大車北向 (一速)
+    RELAY_SOUTH       = (1 << 5),  // K6: 大車南向 (一速)
+    RELAY_HORN        = (1 << 6),  // K7: 警報蜂鳴器/電笛
+    RELAY_MAIN        = (1 << 7),  // K8: 主接觸器 (Main Contactor)
+    RELAY_SPEED_2     = (1 << 8),  // K9: 二速加速繼電器 (2nd Speed Inverter/Resistance Relay)
+    RELAY_BRAKE_DELAY = (1 << 9),  // 煞車延遲保護指示 (Brake Delay in effect)
 };
 
 // 嚴格位元組對齊的工業遙控封包結構

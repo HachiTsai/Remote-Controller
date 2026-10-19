@@ -26,7 +26,9 @@ public:
           m_lastPacketTimeMs(0),
           m_packetsReceived(0),
           m_crcErrors(0),
-          m_watchdogTrips(0) {}
+          m_watchdogTrips(0),
+          m_wasSpeed2Active(false),
+          m_brakeDelayUntilMs(0) {}
 
     // 處理傳入的無線封包
     bool processPacket(const RemotePacket& pkt, uint32_t nowMs, bool upperLimitSensor = false) {
@@ -59,6 +61,8 @@ public:
         if (pkt.packetType == PKT_ESTOP || (pkt.buttonState & BTN_MASK_ESTOP)) {
             m_state = RX_STATE_ESTOP;
             m_relays = RELAY_NONE; // 切斷主接觸器與所有動作繼電器
+            m_wasSpeed2Active = false;
+            m_brakeDelayUntilMs = 0;
             return true;
         }
 
@@ -94,18 +98,48 @@ public:
             bool northActive= (pkt.buttonState & BTN_MASK_NORTH)&& !(pkt.buttonState & BTN_MASK_SOUTH);
             bool southActive= (pkt.buttonState & BTN_MASK_SOUTH)&& !(pkt.buttonState & BTN_MASK_NORTH);
 
-            // 衝頂極限開關保護 (Upper Limit Switch)
-            // 若吊鉤碰觸到頂端極限開關，禁止上升 (UP)，但允許下降 (DOWN) 脫困
-            if (upActive && !upperLimitSensor) {
-                out |= RELAY_UP;
+            bool anyMotionActive = upActive || downActive || eastActive || westActive || northActive || southActive;
+
+            // 二速訊號判定 (手冊規範：支援單向二速位元或通用二速旗標)
+            bool isSpeed2Req = anyMotionActive && (
+                (pkt.buttonState & (BTN_MASK_UP_2 | BTN_MASK_DOWN_2 | BTN_MASK_EAST_2 | BTN_MASK_WEST_2 |
+                                    BTN_MASK_NORTH_2 | BTN_MASK_SOUTH_2 | BTN_MASK_SPEED2)) != 0
+            );
+
+            // 煞車延遲保護 (Brake Delay) 判定：
+            // 手冊規範：當按鍵從二速回到一速時，一速跟二速的輸出點會跳掉，一秒鐘後一速的輸出點會自動再吸住
+            if (m_wasSpeed2Active && anyMotionActive && !isSpeed2Req) {
+                m_brakeDelayUntilMs = nowMs + 1000;
             }
-            if (downActive) {
-                out |= RELAY_DOWN;
+            m_wasSpeed2Active = isSpeed2Req;
+
+            bool inBrakeDelay = anyMotionActive && !isSpeed2Req && (nowMs < m_brakeDelayUntilMs);
+
+            if (inBrakeDelay) {
+                // 處於 1 秒煞車延遲保護過渡期，斷開動作接點，點亮延遲指示
+                out |= RELAY_BRAKE_DELAY;
+            } else {
+                // 衝頂極限開關保護 (Upper Limit Switch)
+                if (upActive && !upperLimitSensor) {
+                    out |= RELAY_UP;
+                }
+                if (downActive) {
+                    out |= RELAY_DOWN;
+                }
+                if (eastActive)  out |= RELAY_EAST;
+                if (westActive)  out |= RELAY_WEST;
+                if (northActive) out |= RELAY_NORTH;
+                if (southActive) out |= RELAY_SOUTH;
+
+                // 若為二速，同時閉合二速加速繼電器 (吸/吸接點模式)
+                if (isSpeed2Req) {
+                    // 若觸發衝頂極限，上升方向禁止二速加速
+                    if (!(upActive && upperLimitSensor)) {
+                        out |= RELAY_SPEED_2;
+                    }
+                }
             }
-            if (eastActive)  out |= RELAY_EAST;
-            if (westActive)  out |= RELAY_WEST;
-            if (northActive) out |= RELAY_NORTH;
-            if (southActive) out |= RELAY_SOUTH;
+
             if (pkt.buttonState & BTN_MASK_HORN) out |= RELAY_HORN;
 
             m_relays = out;
@@ -121,6 +155,8 @@ public:
                 // 超過看門狗時限，自動判定斷訊跳脫
                 m_state = RX_STATE_LOST_LINK;
                 m_relays = RELAY_NONE;
+                m_wasSpeed2Active = false;
+                m_brakeDelayUntilMs = 0;
                 m_watchdogTrips++;
             }
         }
@@ -130,6 +166,10 @@ public:
     ReceiverState getState() const { return m_state; }
     uint16_t getRelays() const { return m_relays; }
     bool isMainEngaged() const { return (m_relays & RELAY_MAIN) != 0; }
+    bool isSpeed2Active() const { return (m_relays & RELAY_SPEED_2) != 0; }
+    bool isBrakeDelayActive(uint32_t nowMs) const {
+        return (m_state == RX_STATE_ENGAGED) && (nowMs < m_brakeDelayUntilMs);
+    }
     uint32_t getPacketsReceived() const { return m_packetsReceived; }
     uint32_t getCrcErrors() const { return m_crcErrors; }
     uint32_t getWatchdogTrips() const { return m_watchdogTrips; }
@@ -143,6 +183,8 @@ private:
     uint32_t m_packetsReceived;
     uint32_t m_crcErrors;
     uint32_t m_watchdogTrips;
+    bool m_wasSpeed2Active;
+    uint32_t m_brakeDelayUntilMs;
 };
 
 #endif // RECEIVER_H
