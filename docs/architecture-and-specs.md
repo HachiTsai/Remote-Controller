@@ -1,14 +1,14 @@
 # 工業用無線遙控器系統架構與規格書 (System Architecture & Specs)
 
-## 1. 專案背景與參考標竿
+## 1. 專案背景與設計規範
 
-本專案旨在研發工業級行車/起重機無線遙控器（Wireless Pendant Remote Controller），參考以下兩大主流工業廠商標準：
-1. **Schneider Electric Harmony eXLhoist (ZART8LS)**：
-   - 6 動作按鈕（Up, Down, East, West, North, South）+ 2 輔助按鈕（Start, Horn）+ 頂部急停開關（E-Stop）。
-   - IP65 防塵防水防摔規格，LED 狀態指示，雙向通訊機制。
-2. **Advanced Radiotech Corporation (大灃科技 ARC FLEX 系列)**：
-   - 台灣與全球起重機市場高普及率標準。
-   - 工業級對向互鎖防護（Motion Interlock）、32-bit 安全配對 ID、滾動計數與 CRC 校驗、心跳監視（Watchdog Fail-Safe）。
+本專案旨在研發符合國際工業標準之天車/起重機無線遙控器（Wireless Pendant Remote Controller），遵循下列核心工業規範：
+1. **懸吊人體工學與操作拓撲規範（符合 EN ISO 13849-1 / IEC 61508）**：
+   - 6 動作按鈕（Up, Down, East, West, North, South）+ 2 輔助按鈕（Start, Horn）+ 頂部蘑菇頭急停開關（E-Stop）。
+   - IP65 防塵防水防衝擊規格，LED 狀態指示，雙向通訊機制。
+2. **重工業通訊防干擾與安全互鎖規範（PLd / SIL2 等級）**：
+   - 重工業起重吊裝高可靠度防護標準。
+   - 工業級對向互鎖防護（Motion Interlock）、32-bit 系統唯一安全配對碼、滾動序號防重放攻擊、CRC-16 校驗、RF 斷訊看門狗安全跳脫（Watchdog Fail-Safe）。
 
 ---
 

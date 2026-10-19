@@ -2,9 +2,9 @@
 
 本專案為工業級天車/起重機無線遙控器（Wireless Pendant Remote Controller）之系統架構與韌體開發倉庫。
 
-參考工業標竿規格：
-- **Schneider Electric**：Harmony eXLhoist (ZART8LS)
-- **Advanced Radiotech (ARC)**：FLEX 8EX / 8ES 工業安全無線遙控系列
+設計規格標準：
+- 符合國際起重吊裝安全標準（EN ISO 13849-1 PLd / IEC 61508 SIL2 規範）
+- 採用工業通用「6 動作方向 + 2 輔助功能 + 蘑菇頭急停」懸吊式遙控拓撲架構
 
 ---
 

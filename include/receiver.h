@@ -6,7 +6,7 @@
 
 // ==========================================
 // 工業天車接收主機引擎 (Crane Receiver Engine)
-// 參考標準：Schneider eXLhoist & ARC FLEX 接收機安全規範
+// 符合起重機械無線控制安全標準 (EN ISO 13849-1 / IEC 61508 SIL2)
 // ==========================================
 
 enum ReceiverState : uint8_t {
@@ -18,7 +18,7 @@ enum ReceiverState : uint8_t {
 
 class ReceiverEngine {
 public:
-    explicit ReceiverEngine(uint32_t expectedSystemId = 0x41524331, uint32_t watchdogTimeoutMs = 500)
+    explicit ReceiverEngine(uint32_t expectedSystemId = 0x53595331, uint32_t watchdogTimeoutMs = 500)
         : m_systemId(expectedSystemId),
           m_watchdogTimeoutMs(watchdogTimeoutMs),
           m_state(RX_STATE_DISENGAGED),

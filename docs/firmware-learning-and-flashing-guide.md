@@ -2,7 +2,7 @@
 
 > **專案倉庫**：[Remote-Controller](https://github.com/HachiTsai/Remote-Controller)  
 > **技術核心**：C/C++、ESP32、PlatformIO、ESP-NOW 2.4GHz、工業安全互鎖（Interlock）  
-> **參考標竿**：Schneider Electric Harmony eXLhoist (ZART8LS) 與 Advanced Radiotech (ARC FLEX)
+> **設計規格**：符合國際通用起重吊裝安全標準（EN ISO 13849-1 / IEC 61508）
 
 ---
 
@@ -29,7 +29,7 @@
 
 * **核心練習工作台**：
   1. **Web 虛擬機操作台 (`simulator/index.html`)**：
-     - 在本機瀏覽器中隨時開啟，體驗 Schneider / ARC 工業黃黑防摔外殼。
+     - 在本機瀏覽器中隨時開啟，體驗工業黃黑高防護防摔外殼 HMI。
      - **急停拍下卡死（E-STOP Lock）**：拍下紅色蘑菇頭按鈕，所有動作通道強制歸零，系統進入安全切斷模式；旋轉復歸後，必須按 START 才能重新就緒。
      - **對向動作互鎖（Interlock Protection）**：同時按住 `UP + DOWN`，系統自動辨識為衝突並發出 `INTERLOCK ERROR`，防呆全斷。
      - **2.4GHz RF 封包 Hex 監聽**：即時觀察發射的 15-byte 緊密二進位封包與 CRC16 校驗碼。

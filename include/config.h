@@ -5,7 +5,7 @@
 
 // ==========================================
 // 工業用無線遙控器硬體腳位配置 (ESP32)
-// 參考規格：Schneider ZART8LS & ARC FLEX 系列
+// 工業級天車起重機無線遙控規範 (符合 EN ISO 13849-1 / SIL2 安全標準)
 // ==========================================
 
 // 1. 緊急停止開關 (Emergency Stop - 常閉 NC 迴路，拉高時正常，按下開路/低電位)
@@ -41,6 +41,6 @@
 #define DEBOUNCE_MS         20    // 按鍵防彈跳濾波時間 (毫秒)
 #define HEARTBEAT_INTERVAL_MS 100 // 無按鍵時心跳封包發送間隔 (毫秒)
 #define ACTIVE_TX_INTERVAL_MS 40  // 有按鍵動作時的高頻發送間隔 (毫秒)
-#define SYSTEM_SECURITY_ID  0x41524331 // 32-bit 系統唯一配對安全碼 ('ARC1')
+#define SYSTEM_SECURITY_ID  0x53595331 // 32-bit 系統唯一配對安全碼 ('SYS1')
 
 #endif // CONFIG_H

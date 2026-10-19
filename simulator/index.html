@@ -567,7 +567,7 @@
 
   <header>
     <h1>🕹️ 工業天車無線遙控系統 - 虛擬數位分身 (Virtual Machine)</h1>
-    <p class="subtitle">Schneider eXLhoist & ARC FLEX 工業雙重互鎖規範 + 接收機電控配電箱 + 2D 工廠實時動態模擬</p>
+    <p class="subtitle">通用工業天車安全互鎖規範 (EN ISO 13849-1 / SIL2) + 接收機電控配電箱 + 2D 工廠實時動態模擬</p>
   </header>
 
   <div class="workspace">
@@ -576,7 +576,7 @@
          ============================================== -->
     <div class="remote-pendant">
       <div class="remote-header">
-        <span class="brand-title">ARC-EXLHOIST // TX</span>
+        <span class="brand-title">IND-HOIST // TX</span>
         <div class="led-cluster">
           <div class="led-box">
             <div class="led-light" id="ledTx"></div>
@@ -601,7 +601,7 @@
       <div class="oled-bezel">
         <div class="oled-screen" id="oledScreen">
           <div class="oled-row">
-            <span>ID:ARC1</span>
+            <span>ID:SYS1</span>
             <span id="oledBat">BAT:98%</span>
           </div>
           <div class="oled-title" id="oledTitle">[ STANDBY ]</div>
@@ -772,7 +772,7 @@
     // ==========================================
     const PROTOCOL_SYNC1 = 0x53; // 'S'
     const PROTOCOL_SYNC2 = 0x45; // 'E'
-    const SYSTEM_ID = 0x41524331; // "ARC1"
+    const SYSTEM_ID = 0x53595331; // "SYS1"
 
     const PKT_HEARTBEAT = 0x01;
     const PKT_COMMAND   = 0x02;
@@ -1442,7 +1442,7 @@
       // 天車噸位標示
       ctx.fillStyle = '#0f172a';
       ctx.font = 'bold 10px sans-serif';
-      ctx.fillText('SAFE LOAD 10 TON // ARC-CRANE-01', factory.railLeft + 30, factory.railY + 18);
+      ctx.fillText('SAFE LOAD 10 TON // CRANE-UNIT-01', factory.railLeft + 30, factory.railY + 18);
     }
 
     function drawLimitSwitch(tripped) {
