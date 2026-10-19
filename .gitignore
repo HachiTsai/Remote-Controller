@@ -1,0 +1,24 @@
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+.clangd/
+
+# C/C++ Compiled Binaries
+*.o
+*.obj
+*.elf
+*.bin
+*.hex
+tests/test_protocol
+
+# Python & Testing Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+
+# OS Specific
+.DS_Store
+Thumbs.db
