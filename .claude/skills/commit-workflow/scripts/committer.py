@@ -2,18 +2,21 @@
 """Structured git commit helper for Remote-Controller.
 
 Staging control, staged diff summary, closed type list, `git commit -F`,
-Co-Authored-By injection, auto-quick mode, push with retry.
+Co-Authored-By injection, auto-quick mode, push with retry,
+and automatic PR creation + CI auto-merge into main.
 
 Modes:
   committer.py                          stage, then print diff/stat + template for drafting
-  committer.py --message-file F         commit with the drafted message, then push
-  committer.py --auto-quick             build a short message from the staged files and commit
+  committer.py --message-file F         commit with the drafted message, push, create PR & auto-merge
+  committer.py --auto-quick             build a short message from staged files, commit, push, create PR & auto-merge
 """
 from __future__ import annotations
 
 import argparse
 import fnmatch
+import json
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -202,7 +205,7 @@ def build_auto_quick_message(files: Sequence[str]) -> str:
     return append_coauthor(msg)
 
 
-def commit_with_message_file(path: Path) -> None:
+def commit_with_message_file(path: Path) -> str:
     text = path.read_text(encoding="utf-8")
     lines = text.strip().splitlines()
     if not lines:
@@ -212,19 +215,20 @@ def commit_with_message_file(path: Path) -> None:
     final_msg = append_coauthor(text)
     path.write_text(final_msg, encoding="utf-8")
     git(["commit", "-F", str(path)], timeout=GIT_COMMIT_TIMEOUT_SEC)
+    return final_msg
 
 
-def push_with_retry(branch: str) -> None:
+def push_with_retry(branch: str) -> bool:
     if not branch:
         print("[warn] 無法偵測目前分支名稱，跳過推送。")
-        return
+        return False
 
     for attempt, delay in enumerate(PUSH_BACKOFF_SEC, start=1):
         try:
             res = git(["push", "-u", "origin", branch], timeout=GIT_PUSH_TIMEOUT_SEC, check=False)
             if res.returncode == 0:
                 print(f"[ok] 已推送到 origin/{branch}")
-                return
+                return True
             print(f"[warn] 推送失敗（第 {attempt} 次）：{res.stderr.strip()}")
         except subprocess.TimeoutExpired:
             print(f"[warn] 推送逾時（第 {attempt} 次）")
@@ -233,6 +237,77 @@ def push_with_retry(branch: str) -> None:
             time.sleep(delay)
 
     print(f"[error] 推送失敗超過重試次數，請稍後手動執行：git push -u origin {branch}", file=sys.stderr)
+    return False
+
+
+def handle_pr_and_merge(branch: str, full_message: str, auto_merge: bool = True) -> None:
+    """自動建立 PR 並於 CI 通過後自動合併至 main。"""
+    if branch == "main":
+        print("[info] 目前已在 main 分支，無需建立 PR。")
+        return
+
+    if not shutil.which("gh"):
+        print("[warn] 系統中未檢測到 gh CLI 工具，跳過自動建立 PR 與合併流程。")
+        return
+
+    lines = full_message.strip().splitlines()
+    title = lines[0] if lines else f"feat: update {branch}"
+    body = "\n".join(lines[1:]).strip() if len(lines) > 1 else "由 Agent 自動提交之更新"
+
+    # 1. 檢查是否已有現存 PR
+    pr_url = ""
+    view_res = subprocess.run(["gh", "pr", "view", branch, "--json", "number,url"], capture_output=True, text=True)
+    if view_res.returncode == 0:
+        try:
+            data = json.loads(view_res.stdout)
+            pr_url = data.get("url", "")
+            print(f"[ok] 現存 PR 已就緒：{pr_url}")
+        except Exception:
+            pass
+
+    # 2. 若無 PR 則自動建立
+    if not pr_url:
+        create_res = subprocess.run(
+            ["gh", "pr", "create", "--base", "main", "--head", branch, "--title", title, "--body", body],
+            capture_output=True, text=True
+        )
+        if create_res.returncode == 0:
+            pr_url = create_res.stdout.strip()
+            print(f"[ok] 已自動建立 Pull Request：{pr_url}")
+        else:
+            print(f"[warn] 自動建立 PR 失敗：{create_res.stderr.strip()}")
+            return
+
+    if not auto_merge:
+        print(f"[info] 未啟用自動合併，請手動檢視 PR：{pr_url}")
+        return
+
+    # 3. 嘗試啟用 GitHub 原生 Auto-Merge
+    auto_res = subprocess.run(
+        ["gh", "pr", "merge", branch, "--auto", "--merge", "--delete-branch"],
+        capture_output=True, text=True
+    )
+    if auto_res.returncode == 0:
+        print("[ok] 已成功啟用 GitHub Auto-Merge，CI 檢查通過後將自動合併至 main 並刪除分支。")
+        return
+
+    # 4. 若倉庫未開放 Auto-Merge，則主動等待 CI 檢查全綠後執行 Merge Commit
+    print(f"[info] 正在等待 GitHub Actions CI 檢查通過 (gh pr checks {branch} --watch)...")
+    watch_res = subprocess.run(["gh", "pr", "checks", branch, "--watch"], capture_output=True, text=True)
+    if watch_res.returncode == 0:
+        merge_res = subprocess.run(
+            ["gh", "pr", "merge", branch, "--merge", "--delete-branch"],
+            capture_output=True, text=True
+        )
+        if merge_res.returncode == 0:
+            print(f"[ok] 🎉 CI 全綠！PR 已成功合併進 main 分支，並清理本機/遠端分支 {branch}。")
+            git(["checkout", "main"])
+            git(["pull", "--ff-only"])
+            print("[ok] 本機工作區已自動切換並同步至最新 main 分支。")
+        else:
+            print(f"[warn] 合併 PR 失敗：{merge_res.stderr.strip()}")
+    else:
+        print(f"[warn] CI 檢查未全數通過或逾時，請手動確認 PR 狀態：{pr_url}")
 
 
 def main() -> int:
@@ -240,6 +315,8 @@ def main() -> int:
     parser.add_argument("--message-file", type=Path, help="讀取訊息檔，驗證標題後 git commit -F，並補上 Co-Authored-By")
     parser.add_argument("--auto-quick", action="store_true", help="依 staged 檔案自動產生標題與 bullet")
     parser.add_argument("--no-push", action="store_true", help="提交後不推送")
+    parser.add_argument("--no-pr", action="store_true", help="推送後不自動建立 PR")
+    parser.add_argument("--no-merge", action="store_true", help="建立 PR 後不自動等待合併")
     parser.add_argument("--dry-run", action="store_true", help="只預覽訊息，不提交")
     parser.add_argument("--no-stage", action="store_true", help="不執行 git add，使用既有暫存區")
     parser.add_argument("--stage-list", nargs="+", help="清空暫存區後只暫存指定路徑")
@@ -270,14 +347,24 @@ def main() -> int:
                 print(f"  - {iss}", file=sys.stderr)
             return 1
 
+    # 確保不在 main 分支直接提交；若在 main 分支則自動切換至 feature 分支
+    branch = current_branch()
+    if branch == "main" and not args.no_pr:
+        new_branch = f"feat/auto-{int(time.time())}"
+        print(f"[info] 目前位於 main 分支。為了落實 PR CI 規範，自動建立並切換至：{new_branch}")
+        git(["checkout", "-b", new_branch])
+        branch = new_branch
+
     if args.message_file:
         if args.dry_run:
             print("[dry-run] 讀取訊息檔預覽：")
             print(args.message_file.read_text(encoding="utf-8"))
             return 0
-        commit_with_message_file(args.message_file)
+        committed_msg = commit_with_message_file(args.message_file)
         if not args.no_push:
-            push_with_retry(current_branch())
+            if push_with_retry(branch):
+                if not args.no_pr:
+                    handle_pr_and_merge(branch, committed_msg, auto_merge=not args.no_merge)
         return 0
 
     if args.auto_quick:
@@ -289,12 +376,14 @@ def main() -> int:
         temp_file = Path(".git/COMMIT_MSG_TEMP")
         temp_file.write_text(msg, encoding="utf-8")
         try:
-            commit_with_message_file(temp_file)
+            committed_msg = commit_with_message_file(temp_file)
         finally:
             if temp_file.exists():
                 temp_file.unlink()
         if not args.no_push:
-            push_with_retry(current_branch())
+            if push_with_retry(branch):
+                if not args.no_pr:
+                    handle_pr_and_merge(branch, committed_msg, auto_merge=not args.no_merge)
         return 0
 
     # 預設模式：印出 diff 與草擬模板供 Agent 填寫
