@@ -19,6 +19,11 @@
 
 ## 3. 標準提交步驟
 
+0. **開工先同步**（本機與雲端 Claude 協作時必做）：
+   ```bash
+   python3 .claude/skills/commit-workflow/scripts/committer.py --sync
+   ```
+   只做 fast-forward；有未提交變更、與遠端分叉時不動並回報。環境懷疑有問題時用 `--patrol` 巡檢。
 1. **暫存與檢查**：
    ```bash
    python3 .claude/skills/commit-workflow/scripts/committer.py
