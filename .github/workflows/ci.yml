@@ -25,7 +25,7 @@ jobs:
         run: python -m pip install --upgrade pip pytest ruff
 
       - name: 執行 Agent 提交流程與規範同步測試
-        run: pytest -v tests/test_committer.py tests/test_repo_health.py
+        run: pytest -v tests
 
       - name: 執行 Study Notes 筆記技能單元測試
         run: python -m unittest discover -s .claude/skills/study-notes/scripts/tests -v
