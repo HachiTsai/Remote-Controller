@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout 程式碼
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 設定 Python 環境
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -43,15 +43,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout 程式碼
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 設定 Python 環境
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: 快取 PlatformIO 核心套件與平台依賴
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.platformio
@@ -68,7 +68,7 @@ jobs:
 
       - name: 上傳編譯產物 (Firmware Binary Artifact)
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: esp32-remote-firmware
           path: .pio/build/esp32dev/firmware.bin
