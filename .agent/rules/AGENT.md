@@ -25,4 +25,3 @@
 - **工業安全與互鎖規範**：@[.claude/rules/industrial-safety.md](../../.claude/rules/industrial-safety.md)
 - **Git 提交流程 Skill**：@[.claude/skills/commit-workflow/SKILL.md](../../.claude/skills/commit-workflow/SKILL.md)
 - **跨專案通用學習筆記 Skill**：@[.claude/skills/study-notes/SKILL.md](../../.claude/skills/study-notes/SKILL.md)
-- **跨 REPO 安全拉取、巡檢與提交前檢查 Skill**：@[.claude/skills/repo-manager/SKILL.md](../../.claude/skills/repo-manager/SKILL.md)

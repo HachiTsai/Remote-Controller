@@ -32,6 +32,9 @@ metadata:
 | `--exclude PATH...` | `git add .` 後排除指定路徑（支援 glob 與目錄前綴） |
 | `--allow-sensitive` | 略過敏感檔案檢查（`.env`、`*.pem`、`*.key` 等） |
 | `--allow-missing-deps` | 略過規範索引（`CLAUDE.md`／`.agent/rules/AGENT.md`）同步檢查 |
+| `--sync` | 安全拉取：`fetch --prune` 後只做 `--ff-only`；有未提交變更、與遠端分叉時不動並回報，分支已併入 `main` 或落後 `main` 時提醒；絕不 rebase／reset／force |
+| `--fetch-only` | 搭配 `--sync`：只 fetch 並回報落後，不快轉 |
+| `--patrol` | 巡檢系統工具（git、python3、uv、gh）、git 狀態、Python 版本；有 `pyproject.toml` 時比對直接依賴是否已安裝；只回報，不安裝 |
 
 ## 核心原則
 

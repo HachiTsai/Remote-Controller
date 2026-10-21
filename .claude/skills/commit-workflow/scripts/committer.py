@@ -9,6 +9,8 @@ Modes:
   committer.py                          stage, then print diff/stat + template for drafting
   committer.py --message-file F         commit with the drafted message, push, create PR & auto-merge
   committer.py --auto-quick             build a short message from staged files, commit, push, create PR & auto-merge
+  committer.py --sync                   safe pull: fetch, then fast-forward only
+  committer.py --patrol                 inspect tools, git state, Python and pyproject packages
 """
 from __future__ import annotations
 
@@ -22,6 +24,9 @@ import sys
 import time
 from pathlib import Path
 from typing import List, Optional, Sequence, Set
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import repo_health  # noqa: E402
 
 GIT_TIMEOUT_SEC = 60
 GIT_COMMIT_TIMEOUT_SEC = 300
@@ -333,7 +338,16 @@ def main() -> int:
     parser.add_argument("--allow-sensitive", action="store_true", help="略過敏感檔案檢查")
     parser.add_argument("--allow-missing-deps", action="store_true", help="略過規則同步檢查")
 
+    parser.add_argument("--sync", action="store_true", help="安全拉取：fetch 後只 fast-forward，有未提交變更或分叉時不動並回報")
+    parser.add_argument("--fetch-only", action="store_true", help="搭配 --sync：只 fetch 並回報落後，不快轉")
+    parser.add_argument("--patrol", action="store_true", help="巡檢系統工具、git 狀態、Python 版本與 pyproject 套件安裝情況")
+
     args = parser.parse_args()
+
+    if args.sync:
+        return repo_health.print_report(repo_health.sync_repo(fetch_only=args.fetch_only))
+    if args.patrol:
+        return repo_health.print_report(repo_health.patrol_repo())
 
     stage_paths(stage_list=args.stage_list, exclude=args.exclude, no_stage=args.no_stage)
 
@@ -347,6 +361,10 @@ def main() -> int:
         if sensitive:
             print(f"[error] 暫存區中含有敏感檔案，已中止提交：\n  " + "\n  ".join(sensitive), file=sys.stderr)
             return 1
+
+    rules_warning = repo_health.claude_without_rules_warning(files)
+    if rules_warning:
+        print(f"[warn] {rules_warning}")
 
     if not args.allow_missing_deps:
         sync_issues = find_rule_sync_issues()

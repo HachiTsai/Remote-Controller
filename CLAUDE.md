@@ -6,7 +6,6 @@
 - **韌體分層架構規範**：@[.claude/rules/firmware-architecture.md](.claude/rules/firmware-architecture.md)
 - **工業安全與互鎖規範**：@[.claude/rules/industrial-safety.md](.claude/rules/industrial-safety.md)
 - **跨專案通用學習筆記技能**：@[.claude/skills/study-notes/SKILL.md](.claude/skills/study-notes/SKILL.md)
-- **跨 REPO 安全拉取、巡檢與提交前檢查技能**：@[.claude/skills/repo-manager/SKILL.md](.claude/skills/repo-manager/SKILL.md)
 
 ## 開發、擴充與提交鐵律
 
